@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prime Number Reaction Time Experiment</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #2c2c2c;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 800px;
+            padding: 20px;
+        }
+
+        #welcome-screen, #instructions-screen, #trial-screen, #break-screen, #end-screen {
+            display: none;
+        }
+
+        .visible {
+            display: block !important;
+        }
+
+        h1 {
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+
+        p {
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        input {
+            padding: 10px;
+            font-size: 1em;
+            margin: 10px 0;
+            width: 200px;
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 1.1em;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        button:active {
+            background-color: #3d8b40;
+        }
+
+        #stimulus {
+            font-size: 6em;
+            font-weight: bold;
+            margin: 50px 0;
+            min-height: 150px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .fixation {
+            font-size: 4em;
+            color: #ffffff;
+        }
+
+        .feedback {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .correct {
+            color: #4CAF50;
+        }
+
+        .incorrect {
+            color: #f44336;
+        }
+
+        .key-reminder {
+            font-size: 1.2em;
+            color: #aaaaaa;
+            margin-top: 20px;
+        }
+
+        .progress {
+            font-size: 1em;
+            color: #aaaaaa;
+            margin-bottom: 20px;
+        }
+
+        .instructions-list {
+            text-align: left;
+            margin: 20px auto;
+            max-width: 600px;
+        }
+
+        .instructions-list li {
+            margin: 10px 0;
+        }
+
+        .key-assignment {
+            background-color: #3a3a3a;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-size: 1.2em;
+        }
+
+        .summary-stats {
+            text-align: left;
+            margin: 20px auto;
+            max-width: 600px;
+            background-color: #3a3a3a;
+            padding: 20px;
+            border-radius: 5px;
+        }
+
+        .summary-stats h3 {
+            margin-top: 15px;
+            margin-bottom: 10px;
+        }
+
+        .summary-stats p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Welcome Screen -->
+        <div id="welcome-screen" class="visible">
+            <h1>Prime Number Reaction Time Experiment</h1>
+            <p>Welcome! This experiment will measure your reaction time when judging whether numbers are prime.</p>
+            <p>Please enter your participant ID:</p>
+            <input type="text" id="participant-id" placeholder="Enter ID">
+            <br>
+            <button onclick="startExperiment()">Start</button>
+        </div>
+
+        <!-- Instructions Screen -->
+        <div id="instructions-screen">
+            <h1>Instructions</h1>
+            <div class="instructions-list">
+                <ul>
+                    <li>You will see numbers on the screen, one at a time.</li>
+                    <li>Your task is to judge whether each number is PRIME or NOT PRIME as quickly and accurately as possible.</li>
+                    <li id="key-instruction"></li>
+                    <li>A fixation cross (+) will appear before each number.</li>
+                    <li>You will receive brief feedback after each response.</li>
+                    <li>The experiment consists of a practice block followed by 4 main blocks.</li>
+                    <li>You can take breaks between blocks.</li>
+                    <li>Try to respond as quickly as possible while maintaining accuracy.</li>
+                </ul>
+            </div>
+            <div class="key-assignment" id="key-assignment-display"></div>
+            <button onclick="startPractice()">Begin Practice</button>
+        </div>
+
+        <!-- Trial Screen -->
+        <div id="trial-screen">
+            <div class="progress" id="progress"></div>
+            <div id="stimulus"></div>
+            <div class="key-reminder" id="key-reminder"></div>
+        </div>
+
+        <!-- Break Screen -->
+        <div id="break-screen">
+            <h2>Break Time</h2>
+            <p id="break-message"></p>
+            <p>Take a short break. When you're ready, press the button to continue.</p>
+            <button onclick="continueExperiment()">Continue</button>
+        </div>
+
+        <!-- End Screen -->
+        <div id="end-screen">
+            <h1>Experiment Complete!</h1>
+            <p>Thank you for participating.</p>
+            <div class="summary-stats" id="summary-stats"></div>
+            <button onclick="downloadData()">Download Data</button>
+        </div>
+    </div>
+
+    <script>
+        // Experiment configuration
+        const PRIMES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37];
+        const NON_PRIMES = [4, 6, 8, 9, 10, 12, 14, 15, 16, 18, 20, 21, 22, 24, 25, 26, 27, 28, 30, 32, 33, 34, 35, 36, 38, 39];
+        const REPS_PER_NUMBER = 25;
+        const PRACTICE_TRIALS = 20;
+        const TRIALS_PER_BLOCK = 150;
+        const NUM_BLOCKS = 4;
+        const FIXATION_DURATION = 500;
+        const FEEDBACK_DURATION = 300;
+
+        // Experiment state
+        let participantId = '';
+        let keyAssignment = {}; // {prime: 'j', notPrime: 'f'} or reversed
+        let currentBlock = 0;
+        let isPractice = true;
+        let trials = [];
+        let currentTrialIndex = 0;
+        let trialStartTime = 0;
+        let experimentStartTime = 0;
+        let data = [];
+        let blockData = { correct: 0, total: 0, totalRT: 0 };
+
+        // Generate trials
+        function generateTrials(isPractice = false) {
+            const trials = [];
+
+            if (isPractice) {
+                // For practice, just create 20 random trials
+                const practiceNumbers = [...PRIMES.slice(0, 6), ...NON_PRIMES.slice(0, 6)];
+                for (let i = 0; i < PRACTICE_TRIALS; i++) {
+                    const num = practiceNumbers[Math.floor(Math.random() * practiceNumbers.length)];
+                    trials.push({
+                        stimulus: num,
+                        isPrime: PRIMES.includes(num)
+                    });
+                }
+            } else {
+                // For main experiment, create all trials with repetitions
+                for (const num of PRIMES) {
+                    for (let i = 0; i < REPS_PER_NUMBER; i++) {
+                        trials.push({ stimulus: num, isPrime: true });
+                    }
+                }
+
+                // Select 12 non-primes to match the 12 primes
+                const selectedNonPrimes = NON_PRIMES.slice(0, 12);
+                for (const num of selectedNonPrimes) {
+                    for (let i = 0; i < REPS_PER_NUMBER; i++) {
+                        trials.push({ stimulus: num, isPrime: false });
+                    }
+                }
+            }
+
+            // Shuffle trials
+            for (let i = trials.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [trials[i], trials[j]] = [trials[j], trials[i]];
+            }
+
+            return trials;
+        }
+
+        // Start experiment
+        function startExperiment() {
+            participantId = document.getElementById('participant-id').value.trim();
+            if (!participantId) {
+                alert('Please enter a participant ID');
+                return;
+            }
+
+            // Counterbalance key assignment (based on participant ID hash)
+            const hash = participantId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            if (hash % 2 === 0) {
+                keyAssignment = { prime: 'j', notPrime: 'f' };
+            } else {
+                keyAssignment = { prime: 'f', notPrime: 'j' };
+            }
+
+            experimentStartTime = new Date();
+            showScreen('instructions-screen');
+
+            // Update key instruction
+            const keyInstruction = document.getElementById('key-instruction');
+            keyInstruction.innerHTML = `Press <strong>${keyAssignment.notPrime.toUpperCase()}</strong> for NOT PRIME and <strong>${keyAssignment.prime.toUpperCase()}</strong> for PRIME.`;
+
+            const keyDisplay = document.getElementById('key-assignment-display');
+            keyDisplay.innerHTML = `<strong>Key Assignment:</strong><br>
+                ${keyAssignment.notPrime.toUpperCase()} = NOT PRIME | ${keyAssignment.prime.toUpperCase()} = PRIME`;
+        }
+
+        // Start practice
+        function startPractice() {
+            isPractice = true;
+            currentBlock = 0;
+            trials = generateTrials(true);
+            currentTrialIndex = 0;
+            blockData = { correct: 0, total: 0, totalRT: 0 };
+            showScreen('trial-screen');
+            updateKeyReminder();
+            setTimeout(startTrial, 500);
+        }
+
+        // Start main experiment
+        function startMainExperiment() {
+            isPractice = false;
+            currentBlock = 1;
+            trials = generateTrials(false);
+            currentTrialIndex = 0;
+            blockData = { correct: 0, total: 0, totalRT: 0 };
+            showScreen('trial-screen');
+            updateKeyReminder();
+            setTimeout(startTrial, 500);
+        }
+
+        // Show screen
+        function showScreen(screenId) {
+            const screens = ['welcome-screen', 'instructions-screen', 'trial-screen', 'break-screen', 'end-screen'];
+            screens.forEach(id => {
+                document.getElementById(id).classList.remove('visible');
+            });
+            document.getElementById(screenId).classList.add('visible');
+        }
+
+        // Update key reminder
+        function updateKeyReminder() {
+            const reminder = document.getElementById('key-reminder');
+            reminder.innerHTML = `${keyAssignment.notPrime.toUpperCase()} = NOT PRIME | ${keyAssignment.prime.toUpperCase()} = PRIME`;
+        }
+
+        // Update progress
+        function updateProgress() {
+            const progress = document.getElementById('progress');
+            if (isPractice) {
+                progress.textContent = `Practice: ${currentTrialIndex + 1} / ${trials.length}`;
+            } else {
+                const trialInBlock = (currentTrialIndex % TRIALS_PER_BLOCK) + 1;
+                progress.textContent = `Block ${currentBlock} / ${NUM_BLOCKS} - Trial ${trialInBlock} / ${TRIALS_PER_BLOCK}`;
+            }
+        }
+
+        // Start trial
+        function startTrial() {
+            if (currentTrialIndex >= trials.length) {
+                endBlock();
+                return;
+            }
+
+            updateProgress();
+
+            // Show fixation
+            const stimulus = document.getElementById('stimulus');
+            stimulus.innerHTML = '<span class="fixation">+</span>';
+
+            setTimeout(() => {
+                // Show stimulus
+                const trial = trials[currentTrialIndex];
+                stimulus.innerHTML = trial.stimulus;
+                trialStartTime = performance.now();
+
+                // Add keyboard listener
+                document.addEventListener('keydown', handleResponse);
+            }, FIXATION_DURATION);
+        }
+
+        // Handle response
+        function handleResponse(event) {
+            const key = event.key.toLowerCase();
+
+            // Only accept f or j
+            if (key !== 'f' && key !== 'j') {
+                return;
+            }
+
+            // Remove listener to prevent multiple responses
+            document.removeEventListener('keydown', handleResponse);
+
+            // Calculate RT
+            const rt = performance.now() - trialStartTime;
+
+            // Determine correctness
+            const trial = trials[currentTrialIndex];
+            const respondedPrime = (key === keyAssignment.prime);
+            const correct = (respondedPrime === trial.isPrime);
+
+            // Record data
+            const trialData = {
+                participantId: participantId,
+                timestamp: new Date().toISOString(),
+                block: isPractice ? 'practice' : currentBlock,
+                trialNumber: currentTrialIndex + 1,
+                stimulus: trial.stimulus,
+                correctResponse: trial.isPrime ? 'prime' : 'not_prime',
+                participantResponse: respondedPrime ? 'prime' : 'not_prime',
+                keyPressed: key,
+                reactionTime: Math.round(rt),
+                accuracy: correct ? 1 : 0
+            };
+
+            if (!isPractice) {
+                data.push(trialData);
+            }
+
+            // Update block stats
+            blockData.total++;
+            blockData.totalRT += rt;
+            if (correct) {
+                blockData.correct++;
+            }
+
+            // Show feedback
+            showFeedback(correct);
+        }
+
+        // Show feedback
+        function showFeedback(correct) {
+            const stimulus = document.getElementById('stimulus');
+            stimulus.innerHTML = `<span class="feedback ${correct ? 'correct' : 'incorrect'}">${correct ? 'Correct' : 'Incorrect'}</span>`;
+
+            setTimeout(() => {
+                currentTrialIndex++;
+                startTrial();
+            }, FEEDBACK_DURATION);
+        }
+
+        // End block
+        function endBlock() {
+            if (isPractice) {
+                // Practice complete, start main experiment
+                alert(`Practice complete!\n\nAccuracy: ${((blockData.correct / blockData.total) * 100).toFixed(1)}%\n\nNow starting the main experiment.`);
+                startMainExperiment();
+            } else if (currentBlock < NUM_BLOCKS) {
+                // Show break screen
+                const breakMessage = document.getElementById('break-message');
+                breakMessage.innerHTML = `You have completed block ${currentBlock} of ${NUM_BLOCKS}.<br>
+                    Accuracy: ${((blockData.correct / blockData.total) * 100).toFixed(1)}%<br>
+                    Average RT: ${(blockData.totalRT / blockData.total).toFixed(0)} ms`;
+                showScreen('break-screen');
+            } else {
+                // Experiment complete
+                showResults();
+            }
+        }
+
+        // Continue experiment
+        function continueExperiment() {
+            currentBlock++;
+            currentTrialIndex = 0;
+            blockData = { correct: 0, total: 0, totalRT: 0 };
+            showScreen('trial-screen');
+            setTimeout(startTrial, 500);
+        }
+
+        // Show results
+        function showResults() {
+            // Calculate summary statistics
+            const totalTrials = data.length;
+            const correctTrials = data.filter(d => d.accuracy === 1).length;
+            const accuracy = (correctTrials / totalTrials) * 100;
+            const meanRT = data.reduce((sum, d) => sum + d.reactionTime, 0) / totalTrials;
+
+            // RT for correct trials only
+            const correctData = data.filter(d => d.accuracy === 1);
+            const meanCorrectRT = correctData.reduce((sum, d) => sum + d.reactionTime, 0) / correctData.length;
+
+            // By prime status
+            const primeData = correctData.filter(d => d.correctResponse === 'prime');
+            const nonPrimeData = correctData.filter(d => d.correctResponse === 'not_prime');
+            const primeMeanRT = primeData.reduce((sum, d) => sum + d.reactionTime, 0) / primeData.length;
+            const nonPrimeMeanRT = nonPrimeData.reduce((sum, d) => sum + d.reactionTime, 0) / nonPrimeData.length;
+
+            // By magnitude (small vs large primes)
+            const smallPrimes = correctData.filter(d => d.correctResponse === 'prime' && d.stimulus < 20);
+            const largePrimes = correctData.filter(d => d.correctResponse === 'prime' && d.stimulus >= 20);
+            const smallPrimeMeanRT = smallPrimes.length > 0 ?
+                smallPrimes.reduce((sum, d) => sum + d.reactionTime, 0) / smallPrimes.length : 0;
+            const largePrimeMeanRT = largePrimes.length > 0 ?
+                largePrimes.reduce((sum, d) => sum + d.reactionTime, 0) / largePrimes.length : 0;
+
+            // Display summary
+            const summaryDiv = document.getElementById('summary-stats');
+            summaryDiv.innerHTML = `
+                <h3>Overall Performance</h3>
+                <p><strong>Total Trials:</strong> ${totalTrials}</p>
+                <p><strong>Accuracy:</strong> ${accuracy.toFixed(1)}% (${correctTrials}/${totalTrials})</p>
+                <p><strong>Mean RT (all trials):</strong> ${meanRT.toFixed(0)} ms</p>
+                <p><strong>Mean RT (correct only):</strong> ${meanCorrectRT.toFixed(0)} ms</p>
+
+                <h3>By Number Type</h3>
+                <p><strong>Prime Numbers:</strong> ${primeMeanRT.toFixed(0)} ms</p>
+                <p><strong>Non-Prime Numbers:</strong> ${nonPrimeMeanRT.toFixed(0)} ms</p>
+                <p><strong>Difference:</strong> ${(primeMeanRT - nonPrimeMeanRT).toFixed(0)} ms</p>
+
+                <h3>By Prime Magnitude</h3>
+                <p><strong>Small Primes (&lt;20):</strong> ${smallPrimeMeanRT.toFixed(0)} ms</p>
+                <p><strong>Large Primes (&ge;20):</strong> ${largePrimeMeanRT.toFixed(0)} ms</p>
+                <p><strong>Difference:</strong> ${(largePrimeMeanRT - smallPrimeMeanRT).toFixed(0)} ms</p>
+            `;
+
+            showScreen('end-screen');
+        }
+
+        // Download data as CSV
+        function downloadData() {
+            if (data.length === 0) {
+                alert('No data to download');
+                return;
+            }
+
+            // Create CSV header
+            const headers = Object.keys(data[0]);
+            let csv = headers.join(',') + '\n';
+
+            // Add data rows
+            data.forEach(row => {
+                csv += headers.map(header => row[header]).join(',') + '\n';
+            });
+
+            // Download
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `primeRT_${participantId}_${new Date().toISOString().replace(/[:.]/g, '-')}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Prevent accidental page refresh
+        window.addEventListener('beforeunload', (e) => {
+            if (data.length > 0 && currentTrialIndex < trials.length) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+    </script>
+</body>
+</html>
